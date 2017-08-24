@@ -5,7 +5,7 @@
  *                            | (__| |_| |  _ <| |___
  *                             \___|\___/|_| \_\_____|
  *
- * Copyright (C) 1998 - 2016, Daniel Stenberg, <daniel@haxx.se>, et al.
+ * Copyright (C) 1998 - 2017, Daniel Stenberg, <daniel@haxx.se>, et al.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution. The terms
@@ -26,10 +26,18 @@
  */
 
 #include "test.h"
+
+#ifdef HAVE_LIMITS_H
+#include <limits.h>
+#endif
+
+#ifdef HAVE_LOCALE_H
+#  include <locale.h> /* for setlocale() */
+#endif
+
 #include "memdebug.h"
 
-
-#if (CURL_SIZEOF_CURL_OFF_T > CURL_SIZEOF_LONG)
+#if (SIZEOF_CURL_OFF_T > SIZEOF_LONG)
 #  define MPRNT_SUFFIX_CURL_OFF_T  LL
 #else
 #  define MPRNT_SUFFIX_CURL_OFF_T  L
@@ -774,7 +782,7 @@ static int test_unsigned_long_formatting(void)
   int num_ulong_tests;
   int failed = 0;
 
-#if (CURL_SIZEOF_LONG == 2)
+#if (SIZEOF_LONG == 2)
 
   i=1; ul_test[i].num = 0xFFFFUL; ul_test[i].expected = "65535";
   i++; ul_test[i].num = 0xFF00UL; ul_test[i].expected = "65280";
@@ -795,7 +803,7 @@ static int test_unsigned_long_formatting(void)
 
   num_ulong_tests = i;
 
-#elif (CURL_SIZEOF_LONG == 4)
+#elif (SIZEOF_LONG == 4)
 
   i=1; ul_test[i].num = 0xFFFFFFFFUL; ul_test[i].expected = "4294967295";
   i++; ul_test[i].num = 0xFFFF0000UL; ul_test[i].expected = "4294901760";
@@ -829,7 +837,7 @@ static int test_unsigned_long_formatting(void)
 
   num_ulong_tests = i;
 
-#elif (CURL_SIZEOF_LONG == 8)
+#elif (SIZEOF_LONG == 8)
 
   i=1; ul_test[i].num = 0xFFFFFFFFFFFFFFFFUL; ul_test[i].expected = "18446744073709551615";
   i++; ul_test[i].num = 0xFFFFFFFF00000000UL; ul_test[i].expected = "18446744069414584320";
@@ -923,7 +931,7 @@ static int test_signed_long_formatting(void)
   int num_slong_tests;
   int failed = 0;
 
-#if (CURL_SIZEOF_LONG == 2)
+#if (SIZEOF_LONG == 2)
 
   i=1; sl_test[i].num = 0x7FFFL; sl_test[i].expected = "32767";
   i++; sl_test[i].num = 0x7FFEL; sl_test[i].expected = "32766";
@@ -966,7 +974,7 @@ static int test_signed_long_formatting(void)
 
   num_slong_tests = i;
 
-#elif (CURL_SIZEOF_LONG == 4)
+#elif (SIZEOF_LONG == 4)
 
   i=1; sl_test[i].num = 0x7FFFFFFFL; sl_test[i].expected = "2147483647";
   i++; sl_test[i].num = 0x7FFFFFFEL; sl_test[i].expected = "2147483646";
@@ -1033,7 +1041,7 @@ static int test_signed_long_formatting(void)
 
   num_slong_tests = i;
 
-#elif (CURL_SIZEOF_LONG == 8)
+#elif (SIZEOF_LONG == 8)
 
   i=1; sl_test[i].num = 0x7FFFFFFFFFFFFFFFL; sl_test[i].expected = "9223372036854775807";
   i++; sl_test[i].num = 0x7FFFFFFFFFFFFFFEL; sl_test[i].expected = "9223372036854775806";
@@ -1151,7 +1159,7 @@ static int test_curl_off_t_formatting(void)
   int num_cofft_tests;
   int failed = 0;
 
-#if (CURL_SIZEOF_CURL_OFF_T == 2)
+#if (SIZEOF_CURL_OFF_T == 2)
 
   i=1; co_test[i].num = MPRNT_OFF_T_C(0x7FFF); co_test[i].expected = "32767";
   i++; co_test[i].num = MPRNT_OFF_T_C(0x7FFE); co_test[i].expected = "32766";
@@ -1194,7 +1202,7 @@ static int test_curl_off_t_formatting(void)
 
   num_cofft_tests = i;
 
-#elif (CURL_SIZEOF_CURL_OFF_T == 4)
+#elif (SIZEOF_CURL_OFF_T == 4)
 
   i=1; co_test[i].num = MPRNT_OFF_T_C(0x7FFFFFFF); co_test[i].expected = "2147483647";
   i++; co_test[i].num = MPRNT_OFF_T_C(0x7FFFFFFE); co_test[i].expected = "2147483646";
@@ -1261,7 +1269,7 @@ static int test_curl_off_t_formatting(void)
 
   num_cofft_tests = i;
 
-#elif (CURL_SIZEOF_CURL_OFF_T == 8)
+#elif (SIZEOF_CURL_OFF_T == 8)
 
   i=1; co_test[i].num = MPRNT_OFF_T_C(0x7FFFFFFFFFFFFFFF); co_test[i].expected = "9223372036854775807";
   i++; co_test[i].num = MPRNT_OFF_T_C(0x7FFFFFFFFFFFFFFE); co_test[i].expected = "9223372036854775806";
@@ -1345,7 +1353,6 @@ static int test_curl_off_t_formatting(void)
   num_cofft_tests = i;
 
 #endif
-  /* !checksrc! enable LONGLINE */
 
   for(i=1; i<=num_cofft_tests; i++) {
 
@@ -1374,16 +1381,31 @@ static int test_curl_off_t_formatting(void)
   return failed;
 }
 
-static int string_check(char *buf, const char *buf2)
+static int _string_check(int linenumber, char *buf, const char *buf2)
 {
   if(strcmp(buf, buf2)) {
     /* they shouldn't differ */
-    printf("sprintf failed:\nwe '%s'\nsystem: '%s'\n",
-           buf, buf2);
+    printf("sprintf line %d failed:\nwe      '%s'\nsystem: '%s'\n",
+           linenumber, buf, buf2);
     return 1;
   }
   return 0;
 }
+#define string_check(x,y) _string_check(__LINE__, x, y)
+
+static int _strlen_check(int linenumber, char *buf, size_t len)
+{
+  size_t buflen = strlen(buf);
+  if(len != buflen) {
+    /* they shouldn't differ */
+    printf("sprintf strlen:%d failed:\nwe '%d'\nsystem: '%d'\n",
+           linenumber, buflen, len);
+    return 1;
+  }
+  return 0;
+}
+
+#define strlen_check(x,y) _strlen_check(__LINE__, x, y)
 
 /*
  * The output strings in this test need to have been verified with a system
@@ -1523,11 +1545,132 @@ static int test_weird_arguments(void)
   return errors;
 }
 
+/* DBL_MAX value from Linux */
+#define MAXIMIZE -1.7976931348623157081452E+308
+
+static int test_float_formatting(void)
+{
+  int errors = 0;
+  char buf[512]; /* larger than max float size */
+  curl_msnprintf(buf, sizeof(buf), "%f", 9.0);
+  errors += string_check(buf, "9.000000");
+
+  curl_msnprintf(buf, sizeof(buf), "%.1f", 9.1);
+  errors += string_check(buf, "9.1");
+
+  curl_msnprintf(buf, sizeof(buf), "%.2f", 9.1);
+  errors += string_check(buf, "9.10");
+
+  curl_msnprintf(buf, sizeof(buf), "%.0f", 9.1);
+  errors += string_check(buf, "9");
+
+  curl_msnprintf(buf, sizeof(buf), "%0f", 9.1);
+  errors += string_check(buf, "9.100000");
+
+  curl_msnprintf(buf, sizeof(buf), "%10f", 9.1);
+  errors += string_check(buf, "  9.100000");
+
+  curl_msnprintf(buf, sizeof(buf), "%10.3f", 9.1);
+  errors += string_check(buf, "     9.100");
+
+  curl_msnprintf(buf, sizeof(buf), "%-10.3f", 9.1);
+  errors += string_check(buf, "9.100     ");
+
+  curl_msnprintf(buf, sizeof(buf), "%-10.3f", 9.123456);
+  errors += string_check(buf, "9.123     ");
+
+  curl_msnprintf(buf, sizeof(buf), "%.-2f", 9.1);
+  errors += string_check(buf, "9.100000");
+
+  curl_msnprintf(buf, sizeof(buf), "%*f", 10, 9.1);
+  errors += string_check(buf, "  9.100000");
+
+  curl_msnprintf(buf, sizeof(buf), "%*f", 3, 9.1);
+  errors += string_check(buf, "9.100000");
+
+  curl_msnprintf(buf, sizeof(buf), "%*f", 6, 9.2987654);
+  errors += string_check(buf, "9.298765");
+
+  curl_msnprintf(buf, sizeof(buf), "%*f", 6, 9.298765);
+  errors += string_check(buf, "9.298765");
+
+  curl_msnprintf(buf, sizeof(buf), "%*f", 6, 9.29876);
+  errors += string_check(buf, "9.298760");
+
+  curl_msnprintf(buf, sizeof(buf), "%.*f", 6, 9.2987654);
+  errors += string_check(buf, "9.298765");
+  curl_msnprintf(buf, sizeof(buf), "%.*f", 5, 9.2987654);
+  errors += string_check(buf, "9.29877");
+  curl_msnprintf(buf, sizeof(buf), "%.*f", 4, 9.2987654);
+  errors += string_check(buf, "9.2988");
+  curl_msnprintf(buf, sizeof(buf), "%.*f", 3, 9.2987654);
+  errors += string_check(buf, "9.299");
+  curl_msnprintf(buf, sizeof(buf), "%.*f", 2, 9.2987654);
+  errors += string_check(buf, "9.30");
+  curl_msnprintf(buf, sizeof(buf), "%.*f", 1, 9.2987654);
+  errors += string_check(buf, "9.3");
+  curl_msnprintf(buf, sizeof(buf), "%.*f", 0, 9.2987654);
+  errors += string_check(buf, "9");
+
+  /* very large precisions easily turn into system specific outputs so we only
+     check the output buffer length here as we know the internal limit */
+
+  curl_msnprintf(buf, sizeof(buf), "%.*f", (1<<30), 9.2987654);
+  errors += strlen_check(buf, 325);
+
+  curl_msnprintf(buf, sizeof(buf), "%10000.10000f", 9.2987654);
+  errors += strlen_check(buf, 325);
+
+  curl_msnprintf(buf, sizeof(buf), "%240.10000f",
+                 123456789123456789123456789.2987654);
+  errors += strlen_check(buf, 325);
+
+  /* check negative when used signed */
+  curl_msnprintf(buf, sizeof(buf), "%*f", INT_MIN, 9.1);
+  errors += string_check(buf, "9.100000");
+
+  /* curl_msnprintf() limits a single float output to 325 bytes maximum
+     width */
+  curl_msnprintf(buf, sizeof(buf), "%*f", (1<<30), 9.1);
+  errors += string_check(buf, "                                                                                                                                                                                                                                                                                                                             9.100000");
+  curl_msnprintf(buf, sizeof(buf), "%100000f", 9.1);
+  errors += string_check(buf, "                                                                                                                                                                                                                                                                                                                             9.100000");
+
+  curl_msnprintf(buf, sizeof(buf), "%f", MAXIMIZE);
+  errors += strlen_check(buf, 317);
+
+  curl_msnprintf(buf, 2, "%f", MAXIMIZE);
+  errors += strlen_check(buf, 1);
+  curl_msnprintf(buf, 3, "%f", MAXIMIZE);
+  errors += strlen_check(buf, 2);
+  curl_msnprintf(buf, 4, "%f", MAXIMIZE);
+  errors += strlen_check(buf, 3);
+  curl_msnprintf(buf, 5, "%f", MAXIMIZE);
+  errors += strlen_check(buf, 4);
+  curl_msnprintf(buf, 6, "%f", MAXIMIZE);
+  errors += strlen_check(buf, 5);
+
+  if(!errors)
+    printf("All float strings tests OK!\n");
+  else
+    printf("test_float_formatting Failed!\n");
+
+  return errors;
+}
+/* !checksrc! enable LONGLINE */
 
 int test(char *URL)
 {
   int errors = 0;
   (void)URL; /* not used */
+
+#ifdef HAVE_SETLOCALE
+  /*
+   * The test makes assumptions about the numeric locale (specifically,
+   * RADIXCHAR) so set it to a known working (and portable) one.
+   */
+  setlocale(LC_NUMERIC, "C");
+#endif
 
   errors += test_weird_arguments();
 
@@ -1546,6 +1689,8 @@ int test(char *URL)
   errors += test_curl_off_t_formatting();
 
   errors += test_string_formatting();
+
+  errors += test_float_formatting();
 
   if(errors)
     return TEST_ERR_MAJOR_BAD;
