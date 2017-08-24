@@ -92,7 +92,7 @@ static int http_getsock_do(struct connectdata *conn,
                            int numsocks);
 static int http_should_fail(struct connectdata *conn);
 
-static void add_haproxy_protocol_header(struct connectdata *conn, bool *done);
+static CURLcode add_haproxy_protocol_header(struct connectdata *conn, bool *done);
 
 #ifdef USE_SSL
 static CURLcode https_connecting(struct connectdata *conn, bool *done);
@@ -1379,7 +1379,9 @@ CURLcode Curl_http_connect(struct connectdata *conn, bool *done)
 
   if(conn->data->set.haproxyprotocol) {
     /* add HAProxy PROXY protocol header */
-    add_haproxy_protocol_header(conn, done);
+    result = add_haproxy_protocol_header(conn, done);
+    if(result)
+      return result;
   }
 
   if(conn->given->protocol & CURLPROTO_HTTPS) {
