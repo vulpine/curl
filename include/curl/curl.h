@@ -1791,8 +1791,8 @@ typedef enum {
   /* Enable/disable SSH compression */
   CINIT(SSH_COMPRESSION, LONG, 268),
 
-  /* send HAProxy PROXY protocol header? */
-  CINIT(HAPROXYPROTOCOL, LONG, 265),
+  /* Send HAProxy PROXY protocol header */
+  CINIT(HAPROXYPROTOCOL, LONG, 269),
 
   CURLOPT_LASTENTRY /* the last unused */
 } CURLoption;
