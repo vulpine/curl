@@ -89,9 +89,10 @@ int my_trace(CURL *handle, curl_infotype type,
   const char *text;
   (void)handle; /* prevent compiler warning */
 
-  switch (type) {
+  switch(type) {
   case CURLINFO_TEXT:
     fprintf(stderr, "== Info: %s", (char *)data);
+    /* FALLTHROUGH */
   default: /* in case a new one is introduced to shock us */
     return 0;
 
@@ -151,7 +152,7 @@ static curlioerr ioctl_callback(CURL *handle, int cmd, void *clientp)
 {
   (void)clientp;
   if(cmd == CURLIOCMD_RESTARTREAD) {
-    printf("APPLICATION: recieved a CURLIOCMD_RESTARTREAD request\n");
+    printf("APPLICATION: received a CURLIOCMD_RESTARTREAD request\n");
     printf("APPLICATION: ** REWINDING! **\n");
     current_offset = 0;
     return CURLIOE_OK;
@@ -165,18 +166,15 @@ static curlioerr ioctl_callback(CURL *handle, int cmd, void *clientp)
 int test(char *URL)
 {
   CURL *curl;
-  CURLcode res = CURLE_OUT_OF_MEMORY;
+  CURLcode res = CURLE_OK;
   struct data config;
   size_t i;
   static const char fill[] = "test data";
 
   config.trace_ascii = 1; /* enable ascii tracing */
 
-  if((curl = curl_easy_init()) == NULL) {
-    fprintf(stderr, "curl_easy_init() failed\n");
-    curl_global_cleanup();
-    return TEST_ERR_MAJOR_BAD;
-  }
+  global_init(CURL_GLOBAL_ALL);
+  easy_init(curl);
 
   test_setopt(curl, CURLOPT_DEBUGFUNCTION, my_trace);
   test_setopt(curl, CURLOPT_DEBUGDATA, &config);
